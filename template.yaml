@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infraestructura DevOps - EC2 y S3
+
+Resources:
+
+  BucketDevOps:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'devops-bucket-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+
+  InstanciaEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0c02fb55956c7d316
+      IamInstanceProfile: LabInstanceProfile
+      Tags:
+        - Key: Name
+          Value: devops-ec2-cloudformation
+
+Outputs:
+  BucketNombre:
+    Description: Nombre del bucket S3
+    Value: !Ref BucketDevOps
+
+  InstanciaId:
+    Description: ID de la instancia EC2
+    Value: !Ref InstanciaEC2
