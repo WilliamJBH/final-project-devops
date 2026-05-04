@@ -1,0 +1,49 @@
+name: Pipeline CI/CD DevOps
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v3
+
+      - name: Instalar dependencias
+        run: |
+          pip install flask==2.3.3
+
+      - name: Ejecutar pruebas
+        run: |
+          python -c "from flask import Flask; print('Flask importado correctamente')"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v3
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Subir archivos a S3
+        run: |
+          zip -r app.zip docker/
+          aws s3 cp app.zip s3://devops-bucket-767398032096/app.zip
+
+      - name: Desplegar en EC2 via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "i-054cf630e31d8d826" \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands=["aws s3 cp s3://devops-bucket-767398032096/app.zip /home/ec2-user/app.zip && unzip -o /home/ec2-user/app.zip -d /home/ec2-user/app"] \
+            --region us-east-1
